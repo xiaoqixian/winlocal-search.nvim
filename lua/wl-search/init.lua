@@ -19,7 +19,7 @@ local function switch_hl(on)
 end
 
 function M.setup()
-  local log = require("wl-search.log").new("wl-search.log")
+  -- local log = require("wl-search.log").new("wl-search.log")
   M.win_patterns = {}
 
   vim.api.nvim_set_hl(0, "WinLocalSearchShadow", {
@@ -40,7 +40,6 @@ function M.setup()
     pattern = ":",
     callback = function()
       local cmd = vim.fn.getcmdline()
-      log.log("the last cmd: " .. cmd)
       if cmd == "nohl" or cmd == "nohlsearch" then
         switch_hl(false)
       end
