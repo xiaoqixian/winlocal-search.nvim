@@ -4,23 +4,25 @@
 
 local M = {}
 
----@param on boolean
-local function switch_hl(on)
-  local hl = nil
-  if on then
-    hl = vim.api.nvim_get_hl(0, { name = "Search" })
-  else
-    hl = {
-      fg = "none",
-      bg = "none"
-    }
-  end
-  vim.api.nvim_set_hl(0, "WinLocalSearch", hl)
-end
-
 function M.setup()
   -- local log = require("wl-search.log").new("wl-search.log")
   M.win_patterns = {}
+  M.winlocal_hl_inited = false
+
+  ---@param on boolean
+  local function switch_hl(on)
+    local hl = nil
+    if on then
+      hl = vim.api.nvim_get_hl(0, { name = "Search" })
+    else
+      hl = {
+        fg = "none",
+        bg = "none"
+      }
+    end
+    vim.api.nvim_set_hl(0, "WinLocalSearch", hl)
+    M.winlocal_hl_inited = true
+  end
 
   vim.api.nvim_set_hl(0, "WinLocalSearchShadow", {
     fg = "none",
@@ -57,7 +59,9 @@ function M.setup()
       end
 
       if win_pat then
-        vim.cmd("syn clear WinLocalSearch")
+        if M.winlocal_hl_inited then
+          vim.cmd("syn clear WinLocalSearch")
+        end
         vim.cmd(("syn match WinLocalSearch /%s/"):format(win_pat))
       end
       -- shadow the global Search highlight
