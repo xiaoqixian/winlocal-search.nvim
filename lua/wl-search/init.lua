@@ -4,7 +4,13 @@
 
 local M = {}
 
-function M.setup()
+local default_config = {
+  enabled = true,
+  keep_hl_on_leaving = true
+}
+
+function M.setup(opts)
+  M.config = vim.tbl_extend("keep", opts or default_config, default_config)
   -- local log = require("wl-search.log").new("wl-search.log")
   M.win_patterns = {}
   M.winlocal_hl_inited = false
@@ -50,36 +56,62 @@ function M.setup()
 
   vim.api.nvim_create_autocmd("WinLeave", {
     callback = function()
-      local win = vim.api.nvim_get_current_win()
-      local win_pat = vim.fn.getreg("/")
-      M.win_patterns[win] = win_pat
+      if M.config.enabled then
+        local win = vim.api.nvim_get_current_win()
+        local win_pat = vim.fn.getreg("/")
+        M.win_patterns[win] = win_pat
 
-      if vim.v.hlsearch == 1 then
-        switch_hl(true)
-      end
+        if M.config.keep_hl_on_leaving then
+          if vim.v.hlsearch == 1 then
+            switch_hl(true)
+          end
 
-      if win_pat then
-        if M.winlocal_hl_inited then
-          vim.cmd("syn clear WinLocalSearch")
+          if win_pat then
+            if M.winlocal_hl_inited then
+              vim.cmd("syn clear WinLocalSearch")
+            end
+            vim.cmd(("syn match WinLocalSearch /%s/"):format(win_pat))
+          end
+          -- shadow the global Search highlight
+          vim.api.nvim_win_set_option(0, "winhighlight", "Search:WinLocalSearchShadow")
         end
-        vim.cmd(("syn match WinLocalSearch /%s/"):format(win_pat))
       end
-      -- shadow the global Search highlight
-      vim.api.nvim_win_set_option(0, "winhighlight", "Search:WinLocalSearchShadow")
     end
   })
 
   vim.api.nvim_create_autocmd("WinEnter", {
     callback = function()
-      local win = vim.api.nvim_get_current_win()
-      ---@type string
-      local pat = M.win_patterns[win]
-      if pat then
-        vim.fn.setreg("/", pat)
+      if M.config.enabled then
+        local win = vim.api.nvim_get_current_win()
+        ---@type string
+        local pat = M.win_patterns[win]
+        if pat then
+          vim.fn.setreg("/", pat)
+        end
+
+        if M.config.keep_hl_on_leaving then
+          vim.api.nvim_win_set_option(0, "winhighlight", "WinLocalSearch:WinLocalSearchShadow")
+        end
       end
-      vim.api.nvim_win_set_option(0, "winhighlight", "WinLocalSearch:WinLocalSearchShadow")
     end
   })
+
+  vim.api.nvim_create_user_command(
+    "WinLocalSearch",
+    function(opts)
+      if opts.args[1] == "enable" then
+        M.config.enabled = true
+      elseif opts.args[1] == "disable" then
+        M.config.enabled = false
+      end
+    end,
+    {
+      nargs = 1,
+      complete = function(_, _, _)
+        return { "enable", "disable" }
+      end
+    }
+  )
 end
 
 return M
