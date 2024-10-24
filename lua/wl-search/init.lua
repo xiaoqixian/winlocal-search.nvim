@@ -6,8 +6,18 @@ local M = {}
 
 local default_config = {
   enabled = true,
-  keep_hl_on_leaving = true
+  keep_hl_on_leaving = true,
 }
+
+local function echo(msg, ...)
+  local output = nil
+  if select("#", ...) == 0 then
+    output = msg
+  else
+    output = msg:format(...)
+  end
+  vim.cmd(("echo '%s'"):format(output))
+end
 
 function M.setup(opts)
   M.config = vim.tbl_extend("keep", opts or default_config, default_config)
@@ -19,7 +29,11 @@ function M.setup(opts)
   local function switch_hl(on)
     local hl = nil
     if on then
-      hl = vim.api.nvim_get_hl(0, { name = "Search" })
+      local search_hl = vim.api.nvim_get_hl(0, { name = "Search" })
+      hl = {
+        fg = search_hl.bg,
+        bg = search_hl.fg
+      }
     else
       hl = {
         fg = "none",
@@ -72,9 +86,9 @@ function M.setup(opts)
             end
             vim.cmd(("syn match WinLocalSearch /%s/"):format(win_pat))
           end
-          -- shadow the global Search highlight
-          vim.api.nvim_win_set_option(0, "winhighlight", "Search:WinLocalSearchShadow")
         end
+        -- shadow the global Search highlight
+        vim.api.nvim_win_set_option(0, "winhighlight", "Search:WinLocalSearchShadow")
       end
     end
   })
@@ -96,19 +110,33 @@ function M.setup(opts)
     end
   })
 
+  vim.api.nvim_create_autocmd("WinClosed", {
+    callback = function()
+      if M.config.enabled and M.winlocal_hl_inited then
+        vim.cmd("syn clear WinLocalSearch")
+      end
+      local win = vim.api.nvim_get_current_win()
+      M.win_patterns[win] = nil
+    end
+  })
+
   vim.api.nvim_create_user_command(
     "WinLocalSearch",
-    function(opts)
-      if opts.args[1] == "enable" then
+    function(cmd_opts)
+      local option = cmd_opts.fargs[1]
+      if option == "on" then
         M.config.enabled = true
-      elseif opts.args[1] == "disable" then
+      elseif option == "off" then
+        if M.config.enabled and M.winlocal_hl_inited then
+          switch_hl(false)
+        end
         M.config.enabled = false
       end
     end,
     {
       nargs = 1,
       complete = function(_, _, _)
-        return { "enable", "disable" }
+        return { "on", "off" }
       end
     }
   )
