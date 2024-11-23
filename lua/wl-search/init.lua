@@ -84,7 +84,9 @@ function M.setup(opts)
             if M.winlocal_hl_inited then
               vim.cmd("syn clear WinLocalSearch")
             end
-            vim.cmd(("syn match WinLocalSearch /%s/"):format(win_pat))
+            if win_pat ~= "" then
+              vim.cmd(("syn match WinLocalSearch /%s/"):format(win_pat))
+            end
           end
         end
         -- shadow the global Search highlight
