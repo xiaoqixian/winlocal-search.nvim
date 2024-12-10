@@ -29,11 +29,7 @@ function M.setup(opts)
   local function switch_hl(on)
     local hl = nil
     if on then
-      local search_hl = vim.api.nvim_get_hl(0, { name = "Search" })
-      hl = {
-        fg = search_hl.bg,
-        bg = search_hl.fg
-      }
+      hl = vim.api.nvim_get_hl(0, { name = "Search" })
     else
       hl = {
         fg = "none",
